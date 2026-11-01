@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>月相轨道模拟器</title>
+<link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+<div id="app" class="app">
+  <header class="titlebar" id="titlebar">
+    <div class="brand pywebview-drag-region">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <defs>
+          <radialGradient id="moonGrad" cx="38%" cy="32%" r="75%">
+            <stop offset="0%" stop-color="#fff6e6" />
+            <stop offset="55%" stop-color="#ffe3b8" />
+            <stop offset="100%" stop-color="#d9a86a" />
+          </radialGradient>
+        </defs>
+        <path d="M21.9 3.6a13 13 0 1 0 8.2 20.3A14.6 14.6 0 0 1 21.9 3.6Z" fill="url(#moonGrad)" />
+      </svg>
+      <div class="brand-text">
+        <b>月相轨道模拟器</b>
+        <span>LUNAR ORBIT</span>
+      </div>
+    </div>
+    <div class="titlebar-drag pywebview-drag-region"></div>
+    <div class="titlebar-actions">
+      <button class="icon-btn" id="btnHelp" title="帮助与关于" aria-label="帮助与关于">
+        <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8.2"/><path d="M7.9 7.6a2.2 2.2 0 1 1 3.1 2c-.7.4-1 .9-1 1.7"/><circle cx="10" cy="14.4" r=".9" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <div class="win-controls" id="winControls">
+        <button class="win-btn" id="btnMin" aria-label="最小化">
+          <svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg>
+        </button>
+        <button class="win-btn" id="btnMax" aria-label="最大化">
+          <svg viewBox="0 0 12 12"><rect x="2.4" y="2.4" width="7.2" height="7.2" rx="1"/></svg>
+        </button>
+        <button class="win-btn close" id="btnClose" aria-label="关闭">
+          <svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="stage" id="stage">
+      <canvas id="orbitCanvas"></canvas>
+      <div class="stage-wash" aria-hidden="true"></div>
+      <div class="sun-edge" id="sunEdge" aria-hidden="true">
+        <span class="sun-halo"></span>
+        <span class="sun-streak"></span>
+        <span class="sun-core"></span>
+      </div>
+
+      <div class="stage-top">
+        <div class="stage-meta">
+          <div class="stage-date"><b id="stageDateText">10月30日</b><span id="stageWeekday">周五</span></div>
+          <div class="stage-sub">
+            <span class="live-dot" id="liveDot"></span>
+            <span id="stageMode">实时</span>
+            <span class="dot-sep">·</span>
+            <span id="stageTime">11:02</span>
+          </div>
+        </div>
+        <div class="stage-tools">
+          <div class="segmented" id="viewSwitch" role="group" aria-label="视角">
+            <button data-view="oblique" class="active">斜视</button>
+            <button data-view="top">俯视</button>
+          </div>
+          <button class="icon-btn tool" id="btnRotate" title="自动旋转视角" aria-label="自动旋转视角" aria-pressed="true">
+            <svg viewBox="0 0 20 20"><path d="M15.5 8.2A6 6 0 1 0 16 12"/><path d="M16.2 4.6v3.9h-3.9"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="space-labels" id="spaceLabels" aria-hidden="true">
+        <div class="space-label" id="labelEarth"><i></i><span>地球</span></div>
+        <div class="space-label moon-label" id="labelMoon"><i></i><span>月球</span><em id="labelPhase">亏凸月</em></div>
+      </div>
+
+      <div class="stage-hint" id="stageHint">拖动旋转 · 滚轮缩放 · 双击复位</div>
+
+      <div class="stage-bottom">
+        <div class="dock" id="dock">
+          <button class="play-btn" id="btnPlay" aria-label="播放">
+            <svg class="ic-play" viewBox="0 0 20 20"><path d="M6.8 4.6l8.4 5.4-8.4 5.4z" fill="currentColor" stroke="none"/></svg>
+            <svg class="ic-pause" viewBox="0 0 20 20"><rect x="5.6" y="4.6" width="3" height="10.8" rx="1.2" fill="currentColor" stroke="none"/><rect x="11.4" y="4.6" width="3" height="10.8" rx="1.2" fill="currentColor" stroke="none"/></svg>
+          </button>
+          <div class="speed" id="speed" role="group" aria-label="演示速度">
+            <button data-speed="0.5">0.5×</button>
+            <button data-speed="1" class="active">1×</button>
+            <button data-speed="2">2×</button>
+            <button data-speed="4">4×</button>
+          </div>
+          <span class="dock-sep"></span>
+          <button class="dock-btn" id="btnToday">
+            <svg viewBox="0 0 20 20"><rect x="3" y="4.4" width="14" height="12.6" rx="2.4"/><path d="M3 8.2h14M7 2.6v3.2M13 2.6v3.2"/></svg>
+            今天
+          </button>
+          <button class="dock-btn" id="btnResetView">
+            <svg viewBox="0 0 20 20"><path d="M3.4 8V3.8h4.2M16.6 8V3.8h-4.2M3.4 12v4.2h4.2M16.6 12v4.2h-4.2"/></svg>
+            复位
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel" id="panel">
+      <section class="card hero" id="hero">
+        <div class="hero-top">
+          <div>
+            <span class="eyebrow">月相</span>
+            <div class="hero-date" id="heroDate">10月30日 · 周五</div>
+          </div>
+          <button class="pill-btn" id="btnToday2">回到今天</button>
+        </div>
+
+        <div class="moon-stage" id="moonStage" title="左右拖动月亮，探索整个朔望月">
+          <div class="moon-halo" id="moonHalo"></div>
+          <div class="moon-rim" id="moonRim"></div>
+          <canvas id="moonCanvas" width="640" height="640"></canvas>
+          <div class="moon-drag-hint">拖动月亮</div>
+        </div>
+
+        <div class="phase-row">
+          <h1 id="phaseName">亏凸月</h1>
+          <div class="illum">
+            <span class="illum-cap">照亮</span>
+            <div class="illum-row"><span class="illum-num" id="illumPct">80</span><span class="illum-unit">%</span></div>
+          </div>
+        </div>
+        <p class="phase-sub"><span id="phaseEn">Waning Gibbous</span><span class="dot-sep">·</span>月龄 <b id="moonAge">19.2</b> 天</p>
+
+        <div class="stats">
+          <div class="stat">
+            <span class="stat-label">相位角</span>
+            <span class="stat-value"><b id="statAngle">225</b>°</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">地月距离</span>
+            <span class="stat-value"><b id="statDist">36.5</b> 万 km</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">月出 <em>约</em></span>
+            <span class="stat-value" id="statRise">21:14</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">月落 <em>约</em></span>
+            <span class="stat-value" id="statSet">09:14</span>
+          </div>
+        </div>
+
+        <div class="next-event">
+          <div class="next-icon">
+            <svg viewBox="0 0 24 24"><path d="M20.5 14.2A8.6 8.6 0 1 1 9.8 3.5a6.9 6.9 0 0 0 10.7 10.7Z"/></svg>
+          </div>
+          <div class="next-text">
+            <span>下次满月</span>
+            <b id="nextEvent">11月24日 · 25 天后</b>
+          </div>
+        </div>
+      </section>
+
+      <section class="presets-block">
+        <div class="section-head">
+          <h3>快速定位</h3>
+          <span>跳到下一次该相位</span>
+        </div>
+        <div class="phase-chips" id="phaseChips">
+          <button data-phase="0">新月</button>
+          <button data-phase="45">娥眉月</button>
+          <button data-phase="90">上弦月</button>
+          <button data-phase="135">盈凸月</button>
+          <button data-phase="180">满月</button>
+          <button data-phase="225">亏凸月</button>
+          <button data-phase="270">下弦月</button>
+          <button data-phase="315">残月</button>
+        </div>
+      </section>
+
+      <section class="card timeline-card">
+        <div class="section-head inside">
+          <h3>月相日历</h3>
+          <span>左右滑动查看</span>
+        </div>
+        <div class="timeline-wrap">
+          <div class="timeline" id="timeline"></div>
+        </div>
+      </section>
+
+    </aside>
+  </main>
+</div>
+
+<div class="loading" id="loading">
+  <div class="loading-inner">
+    <div class="loading-moon"></div>
+    <div class="loading-title">正在校准月相</div>
+    <div class="loading-sub">LUNAR ORBIT SIMULATOR</div>
+    <div class="loading-bar"><i></i></div>
+  </div>
+</div>
+
+<div class="modal" id="modal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <div>
+        <h2 id="modalTitle">关于月相轨道</h2>
+      </div>
+      <button class="icon-btn" id="btnCloseModal" aria-label="关闭">
+        <svg viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <section>
+        <h3>操作</h3>
+        <ul class="guide-list">
+          <li><span>拖动画面</span><em>旋转观察地月系统</em></li>
+          <li><span>滚轮</span><em>拉近 / 拉远视角</em></li>
+          <li><span>空格</span><em>播放 / 暂停</em></li>
+          <li><span>← →</span><em>前后移动一天</em></li>
+          <li><span>拖动月亮</span><em>连续浏览一个朔望月</em></li>
+          <li><span>滚动日历</span><em>向过去 / 未来延伸</em></li>
+          <li><span>点击日历</span><em>跳到任意日期</em></li>
+        </ul>
+      </section>
+      <section>
+        <h3>月相是怎么来的</h3>
+        <p>月球本身不发光，我们看到的形状取决于太阳、地球、月球三者的相对位置。当月球运行到太阳与地球之间，被照亮的一面背对地球，就是新月；当地球位于太阳与月球之间，我们便看到满月。</p>
+        <p>月相角为日月黄经差：0° 为新月，90° 为上弦月，180° 为满月，270° 为下弦月。一个完整的朔望月约 29.53 天。</p>
+      </section>
+    </div>
+    <div class="modal-foot">
+      <span>月相轨道模拟器 <b>v2.0.0</b></span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
